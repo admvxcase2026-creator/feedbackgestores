@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação do Analista — Feedback Mensal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%232D5BFF%22/><text x=%2250%22 y=%2266%22 font-size=%2258%22 font-family=%22Arial,sans-serif%22 font-weight=%22700%22 fill=%22%23fff%22 text-anchor=%22middle%22>F</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F6F8; --card:#FFFFFF; --ink:#1C2430; --sub:#5B6472;
+    --line:#E3E6EA; --accent:#2D5BFF; --accent-ink:#FFFFFF;
+    --ok:#1E9E5A; --warn:#D97706; --bad:#D0342C;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);}
+  .wrap{max-width:640px;margin:0 auto;padding:32px 20px 80px;}
+  header{margin-bottom:28px;}
+  header .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;}
+  header h1{font-size:24px;margin:6px 0 4px;}
+  header p{color:var(--sub);font-size:14px;margin:0;}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--sub);}
+  .chip b{color:var(--ink);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:18px;}
+  .card h2{font-size:17px;margin:0 0 2px;}
+  .card .pdvs{font-size:13px;color:var(--sub);margin-bottom:18px;}
+  .mes-anterior-box{background:#FAFBFC;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:20px;}
+  .mes-anterior-titulo{font-size:12.5px;font-weight:600;color:var(--sub);margin:0 0 10px;}
+  .question{margin-bottom:20px;}
+  .question:last-child{margin-bottom:0;}
+  .question label.qtext{display:block;font-size:14px;font-weight:600;margin-bottom:10px;}
+  .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;}
+  .opt{position:relative;}
+  .opt input{position:absolute;opacity:0;inset:0;cursor:pointer;}
+  .opt span{display:block;text-align:center;padding:10px 6px;border:1.5px solid var(--line);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;transition:.15s;}
+  .opt input:checked + span{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);}
+  .opt:nth-child(1) input:checked + span{background:#1E9E5A;border-color:#1E9E5A;}
+  .opt:nth-child(2) input:checked + span{background:#63B36B;border-color:#63B36B;}
+  .opt:nth-child(3) input:checked + span{background:#D9A441;border-color:#D9A441;}
+  .opt:nth-child(4) input:checked + span{background:#DB7A3E;border-color:#DB7A3E;}
+  .opt:nth-child(5) input:checked + span{background:#D0342C;border-color:#D0342C;}
+  textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;font-family:inherit;font-size:13.5px;resize:vertical;min-height:70px;}
+  .obs-label{display:block;font-size:13px;font-weight:600;margin:18px 0 8px;color:var(--sub);}
+  button.submit{width:100%;background:var(--accent);color:#fff;border:none;padding:15px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;}
+  button.submit:disabled{opacity:.5;cursor:not-allowed;}
+  .state{text-align:center;padding:60px 20px;color:var(--sub);}
+  .state.error{color:var(--bad);}
+  .success{text-align:center;padding:60px 20px;}
+  .success .icon{font-size:40px;margin-bottom:12px;}
+  .success h2{margin:0 0 6px;}
+  .success p{color:var(--sub);}
+  .indice-resultado{display:flex;flex-direction:column;gap:14px;max-width:340px;margin:28px auto 0;}
+  .indice-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;}
+  .indice-nome{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+  .indice-valor{font-size:32px;font-weight:800;}
+  .indice-label{font-size:12px;color:var(--sub);margin-top:2px;}
+  .aviso{text-align:center;padding:50px 20px;}
+  .aviso .icon{font-size:40px;margin-bottom:12px;}
+  .aviso h1{font-size:22px;margin:0 0 10px;}
+  .aviso p{color:var(--sub);font-size:14px;max-width:420px;margin:0 auto 16px;}
+  .aviso-lista{list-style:none;padding:0;margin:0 auto 26px;max-width:340px;display:flex;flex-direction:column;gap:8px;}
+  .aviso-lista li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-weight:600;font-size:14px;}
+  .aviso-novo-box{max-width:420px;margin:0 auto 26px;background:#FFF8E6;border:1px solid #F0D98C;border-radius:10px;padding:14px 18px;text-align:left;}
+  .aviso-novo-box b{display:block;color:#8A6D1A;font-size:13.5px;margin-bottom:6px;}
+  .aviso-novo-box p{margin:0;color:#8A6D1A;font-size:13px;line-height:1.5;}
+  .aviso .submit{max-width:280px;margin:0 auto;}
+  .req{color:var(--bad);font-size:12px;margin-top:6px;display:none;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="state">Carregando…</div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// >>> PREENCHA AQUI <<<
+const SUPABASE_URL = 'https://fevhyllvfhvzzfhwyjuk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZldmh5bGx2Zmh2enpmaHd5anVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NzEyMTcsImV4cCI6MjA5NDQ0NzIxN30.GJRgEKW1bVWX1957_bKCTO6aVmR_rXWRCmo9-ZJDPiE';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const app = document.getElementById('app');
+
+const ESCALA = [
+  {v:'MUITO_BOM', label:'Muito Bom'},
+  {v:'BOM', label:'Bom'},
+  {v:'MEDIO', label:'Médio'},
+  {v:'RUIM', label:'Ruim'},
+  {v:'MUITO_RUIM', label:'Muito Ruim'},
+];
+const SCORE = {MUITO_BOM:100, BOM:75, MEDIO:50, RUIM:25, MUITO_RUIM:0};
+
+function mesAtual(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function mesLabel(){
+  return new Date().toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+}
+function mesAnterior(mesStr){
+  const [y,m] = mesStr.split('-').map(Number);
+  const d = new Date(y, m-2, 1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+async function init(){
+  const params = new URLSearchParams(location.search);
+  const gestorId = params.get('g');
+
+  if(!gestorId){
+    app.innerHTML = `<div class="state error">Link inválido. Peça o link correto ao supervisor responsável.</div>`;
+    return;
+  }
+
+  const { data: gestor, error: gErr } = await supabase.from('gestores').select('*').eq('id', gestorId).single();
+  if(gErr || !gestor){
+    app.innerHTML = `<div class="state error">Gestor não encontrado. Verifique o link.</div>`;
+    return;
+  }
+
+  const { data: pdvs } = await supabase.from('pontos_venda').select('*, analistas(id, nome)').eq('gestor_id', gestorId);
+  if(!pdvs || pdvs.length === 0){
+    app.innerHTML = `<div class="state error">Nenhum ponto de venda vinculado a este gestor.</div>`;
+    return;
+  }
+
+  const { data: perguntas } = await supabase.from('perguntas').select('*').eq('ativa', true).order('ordem');
+
+  // agrupa PDVs por analista
+  const grupos = {};
+  pdvs.forEach(p => {
+    const aId = p.analistas.id;
+    if(!grupos[aId]) grupos[aId] = { analista: p.analistas, pdvs: [] };
+    grupos[aId].pdvs.push(p.nome);
+  });
+
+  const mes = mesAtual();
+  const { data: jaEnviados } = await supabase.from('feedbacks').select('ponto_venda_id').eq('gestor_id', gestorId).eq('mes_referencia', mes);
+  const enviadosSet = new Set((jaEnviados||[]).map(f => f.ponto_venda_id));
+
+  const { data: anteriores } = await supabase.from('feedbacks').select('*').eq('gestor_id', gestorId).eq('mes_referencia', mesAnterior(mes));
+  const anterioresMap = Object.fromEntries((anteriores||[]).map(f => [f.ponto_venda_id, f]));
+
+  if(pdvs.length > 1){
+    renderAviso(gestor, pdvs, grupos, perguntas, mes, enviadosSet, anterioresMap);
+  } else {
+    render(gestor, pdvs, perguntas, mes, enviadosSet, anterioresMap);
+  }
+}
+
+function renderAviso(gestor, pdvs, grupos, perguntas, mes, enviadosSet, anterioresMap){
+  const nomesAnalistas = Object.values(grupos).map(g => g.analista.nome);
+  const nAnalistas = nomesAnalistas.length;
+  const nDestinos = pdvs.length;
+
+  const textoAviso = nAnalistas === 1
+    ? `Você tem <b>${nDestinos} destinos</b> cadastrados, com o mesmo analista responsável — mas como cada loja é diferente, você vai responder <b>${nDestinos} avaliações</b> nesta sessão, uma para cada:`
+    : `Você tem <b>${nDestinos} destinos</b> cadastrados, com <b>${nAnalistas} analistas</b> diferentes — você vai responder <b>${nDestinos} avaliações</b> nesta sessão, uma para cada:`;
+
+  app.innerHTML = `
+    <div class="aviso">
+      <div class="icon">⚠️</div>
+      <h1>Atenção, ${gestor.nome}</h1>
+      <p>${textoAviso}</p>
+      <ul class="aviso-lista">
+        ${pdvs.map(p => `<li>${p.nome} <span style="color:var(--sub);font-weight:400;">— ${p.analistas.nome}</span></li>`).join('')}
+      </ul>
+      <div class="aviso-novo-box">
+        <b>Novo na loja ou novo analista?</b>
+        <p>Se você acabou de assumir algum destes pontos de venda ou algum destes é um analista novo sob sua gestão, colha feedback com a equipe antes de responder — assim a avaliação reflete o histórico real do atendimento, não só a sua percepção dos primeiros dias.</p>
+      </div>
+      <button class="submit" id="btnContinuarAviso">Entendi, continuar</button>
+    </div>`;
+
+  document.getElementById('btnContinuarAviso').addEventListener('click', () => {
+    render(gestor, pdvs, perguntas, mes, enviadosSet, anterioresMap);
+  });
+}
+
+function render(gestor, pdvs, perguntas, mes, enviadosSet, anterioresMap){
+  const pdvNomes = pdvs.map(p => p.nome).join(' + ');
+
+  let cardsHtml = '';
+  pdvs.forEach(p => {
+    const jaRespondeu = enviadosSet.has(p.id);
+    const anterior = anterioresMap ? anterioresMap[p.id] : null;
+    cardsHtml += `
+    <div class="card" data-pdv="${p.id}">
+      <h2>${p.nome}</h2>
+      <div class="pdvs">Analista responsável: <b>${p.analistas.nome}</b>${jaRespondeu ? ' · <b style="color:var(--ok)">avaliação de '+mesLabelSafe(mes)+' já enviada — reenviar substitui</b>' : ''}</div>
+      ${anterior ? `
+      <div class="mes-anterior-box">
+        <p class="mes-anterior-titulo">Sua avaliação do mês passado (${mesLabelSafe(mesAnterior(mes))}) — índice ${anterior.indice_aceitabilidade}%</p>
+        <canvas id="chart-anterior-${p.id}" height="90"></canvas>
+      </div>` : ''}
+      ${perguntas.map(q => `
+        <div class="question" data-pergunta="${q.id}">
+          <label class="qtext">${q.texto}</label>
+          <div class="options">
+            ${ESCALA.map(e => `
+              <label class="opt">
+                <input type="radio" name="p_${p.id}_${q.id}" value="${e.v}">
+                <span>${e.label}</span>
+              </label>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <label class="obs-label">O Gestor possui alguma observação este mês? (obrigatório)</label>
+      <textarea name="obs_${p.id}" required placeholder="Escreva sua observação sobre o atendimento nesta loja"></textarea>
+    </div>`;
+  });
+
+  app.innerHTML = `
+    <header>
+      <div class="eyebrow">Feedback Mensal</div>
+      <h1>Avaliação de Atendimento</h1>
+      <p>Sua avaliação sincera ajuda a melhorar o suporte ao seu ponto de venda.</p>
+      <div class="meta">
+        <div class="chip">Gestor: <b>${gestor.nome}</b></div>
+        <div class="chip">Loja(s): <b>${pdvNomes}</b></div>
+        <div class="chip">Referência: <b>${mesLabelSafe(mes)}</b></div>
+      </div>
+    </header>
+    <form id="form">
+      ${cardsHtml}
+      <div class="req" id="reqMsg">Responda todas as perguntas antes de enviar.</div>
+      <button type="submit" class="submit" id="btnSubmit">Enviar avaliação</button>
+    </form>
+  `;
+
+  pdvs.forEach(p => {
+    const anterior = anterioresMap ? anterioresMap[p.id] : null;
+    if(!anterior) return;
+    const canvas = document.getElementById(`chart-anterior-${p.id}`);
+    if(!canvas) return;
+    const labels = perguntas.map(q => q.texto.length > 22 ? q.texto.slice(0,20)+'…' : q.texto);
+    const valores = perguntas.map(q => SCORE[anterior.respostas[q.id]] ?? null);
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ data: valores, backgroundColor: valores.map(v => v === null ? '#E3E6EA' : (v>=85?'#1E9E5A':v>=65?'#63B36B':v>=45?'#D9A441':v>=25?'#DB7A3E':'#D0342C')) }] },
+      options: {
+        indexAxis: 'y',
+        scales: { x: { min:0, max:100, ticks:{ callback: v => v+'%' } } },
+        plugins: { legend: { display:false } }
+      }
+    });
+  });
+
+  document.getElementById('form').addEventListener('submit', (e) => onSubmit(e, gestor, pdvs, perguntas, mes));
+}
+
+function mesLabelSafe(mesStr){
+  const [y,m] = mesStr.split('-');
+  const d = new Date(Number(y), Number(m)-1, 1);
+  return d.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+}
+
+async function onSubmit(e, gestor, pdvs, perguntas, mes){
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmit');
+  const reqMsg = document.getElementById('reqMsg');
+
+  const rows = [];
+  for(const p of pdvs){
+    const respostas = {};
+    let faltando = false;
+    perguntas.forEach(q => {
+      const val = document.querySelector(`input[name="p_${p.id}_${q.id}"]:checked`);
+      if(!val){ faltando = true; return; }
+      respostas[q.id] = val.value;
+    });
+    if(faltando){
+      reqMsg.textContent = 'Responda todas as perguntas antes de enviar.';
+      reqMsg.style.display = 'block';
+      window.scrollTo({top:0, behavior:'smooth'});
+      return;
+    }
+    const scores = Object.values(respostas).map(v => SCORE[v]);
+    const indice = scores.reduce((a,b)=>a+b,0) / scores.length;
+    const obsField = document.querySelector(`textarea[name="obs_${p.id}"]`);
+    const obs = obsField.value.trim();
+    if(!obs){
+      reqMsg.textContent = 'Responda a observação obrigatória antes de enviar.';
+      reqMsg.style.display = 'block';
+      obsField.style.borderColor = 'var(--bad)';
+      window.scrollTo({top:0, behavior:'smooth'});
+      return;
+    }
+
+    rows.push({
+      gestor_id: gestor.id,
+      analista_id: p.analistas.id,
+      ponto_venda_id: p.id,
+      mes_referencia: mes,
+      respostas,
+      observacao: obs || null,
+      indice_aceitabilidade: Math.round(indice*10)/10
+    });
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  const { error } = await supabase.from('feedbacks').upsert(rows, { onConflict: 'ponto_venda_id,mes_referencia' });
+
+  if(error){
+    btn.disabled = false;
+    btn.textContent = 'Enviar avaliação';
+    alert('Erro ao enviar: ' + error.message);
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="success">
+      <div class="icon">✅</div>
+      <h2>Avaliação enviada!</h2>
+      <p>Obrigado, ${gestor.nome}. Sua resposta foi registrada para ${mesLabelSafe(mes)}.</p>
+      <div class="indice-resultado">
+        ${rows.map(r => {
+          const pdv = pdvs.find(p => p.id === r.ponto_venda_id);
+          return `
+          <div class="indice-card">
+            <div class="indice-nome">${pdv.nome}</div>
+            <div class="indice-valor" style="color:${corIndice(r.indice_aceitabilidade)}">${r.indice_aceitabilidade}%</div>
+            <div class="indice-label">de satisfação nesta avaliação</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function corIndice(v){
+  if(v >= 85) return '#1E9E5A';
+  if(v >= 65) return '#63B36B';
+  if(v >= 45) return '#D9A441';
+  if(v >= 25) return '#DB7A3E';
+  return '#D0342C';
+}
+
+init();
+</script>
+</body>
+</html>
