@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — Feedback de Gestores</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%232D5BFF%22/><text x=%2250%22 y=%2266%22 font-size=%2258%22 font-family=%22Arial,sans-serif%22 font-weight=%22700%22 fill=%22%23fff%22 text-anchor=%22middle%22>F</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F6F8; --card:#FFFFFF; --ink:#1C2430; --sub:#5B6472;
+    --line:#E3E6EA; --accent:#2D5BFF; --radius:14px;
+    --ok:#1E9E5A; --warn:#D97706; --bad:#D0342C;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px;}
+  h1{font-size:22px;margin:0 0 4px;}
+  .sub{color:var(--sub);font-size:13.5px;margin:0 0 22px;}
+  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+  .tab{padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--accent);border-color:var(--accent);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  @media(max-width:720px){.grid2,.grid3{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px;}
+  .card h3{font-size:14.5px;margin:0 0 12px;}
+  input,select,textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 10px;font-family:inherit;font-size:13.5px;margin-bottom:8px;}
+  button{background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+  button.secondary{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+  button.small{padding:6px 10px;font-size:12px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  .tbl-detalhe-fixed{table-layout:fixed;}
+  .tbl-detalhe-fixed th:nth-child(2),.tbl-detalhe-fixed td:nth-child(2){width:15%;}
+  .tbl-detalhe-fixed th:nth-child(3),.tbl-detalhe-fixed td:nth-child(3){width:14%;}
+  .tbl-detalhe-fixed th:nth-child(4),.tbl-detalhe-fixed td:nth-child(4){width:13%;}
+  .tbl-detalhe-fixed th:nth-child(5),.tbl-detalhe-fixed td:nth-child(5){width:10%;}
+  .tbl-detalhe-fixed th:nth-child(6),.tbl-detalhe-fixed td:nth-child(6){width:20%;}
+  .tbl-detalhe-fixed td{vertical-align:middle;}
+  .tbl-detalhe-fixed td:nth-child(n+2){text-align:left;}
+  th{text-align:left;color:var(--sub);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;border-bottom:1px solid var(--line);}
+  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:#fff;}
+  .link-row{display:flex;gap:8px;align-items:center;}
+  .link-row input{margin-bottom:0;flex:1;font-size:12px;color:var(--sub);background:#FAFBFC;}
+  .empty{color:var(--sub);font-size:13px;padding:16px 0;text-align:center;}
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:end;}
+  .filters > div{min-width:160px;}
+  .filters label{display:block;font-size:11.5px;color:var(--sub);margin-bottom:4px;font-weight:600;}
+  .filters input,.filters select{margin-bottom:0;}
+  .index-cell{display:flex;align-items:center;gap:8px;}
+  .bar{width:60px;height:6px;background:#EDEFF2;border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:3px;}
+  .obs-cell{font-size:12.5px;color:var(--sub);}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;}
+  .overlay{position:fixed;inset:0;background:rgba(15,20,28,.5);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:16px;padding:24px;max-width:640px;width:100%;max-height:88vh;overflow:auto;}
+  .modal h2{font-size:17px;margin:0 0 4px;}
+  .modal .info{font-size:13px;color:var(--sub);}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
+  .trend-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff;margin-left:6px;}
+  .detail-box{background:#FAFBFC;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;}
+  .avaliacao-card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;}
+  .avaliacao-card:last-child{margin-bottom:0;}
+  .resposta-row{cursor:pointer;}
+  .resposta-row:hover{background:#FAFBFC;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Feedback de Gestores</h1>
+  <p class="sub">Cadastros, links de avaliação e índice de aceitabilidade por analista / ponto de venda.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="cadastros">Cadastros</div>
+    <div class="tab" data-tab="perguntas">Perguntas</div>
+    <div class="tab" data-tab="links">Links</div>
+    <div class="tab" data-tab="resultados">Resultados</div>
+  </div>
+
+  <!-- CADASTROS -->
+  <div class="panel active" id="panel-cadastros">
+    <div class="grid3">
+      <div class="card">
+        <h3>Novo Analista</h3>
+        <input id="in-analista-nome" placeholder="Nome do analista">
+        <button onclick="addAnalista()">Adicionar</button>
+      </div>
+      <div class="card">
+        <h3>Novo Gestor</h3>
+        <input id="in-gestor-nome" placeholder="Nome do gestor">
+        <input id="in-gestor-tel" placeholder="Telefone (opcional)">
+        <button onclick="addGestor()">Adicionar</button>
+      </div>
+      <div class="card">
+        <h3>Novo Ponto de Venda</h3>
+        <input id="in-pdv-nome" placeholder="Nome do ponto de venda">
+        <input id="in-pdv-codigo" placeholder="Código (opcional)">
+        <select id="in-pdv-gestor"><option value="">Selecione o gestor…</option></select>
+        <select id="in-pdv-analista"><option value="">Selecione o analista…</option></select>
+        <button onclick="addPdv()">Adicionar</button>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Analistas cadastrados</h3>
+        <table>
+          <thead><tr><th>Nome</th><th></th></tr></thead>
+          <tbody id="tbl-analistas"><tr><td colspan="2" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Gestores cadastrados</h3>
+        <table>
+          <thead><tr><th>Nome</th><th>Telefone</th><th></th></tr></thead>
+          <tbody id="tbl-gestores"><tr><td colspan="3" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pontos de venda cadastrados</h3>
+      <table>
+        <thead><tr><th>Ponto de Venda</th><th>Gestor</th><th>Analista</th><th></th></tr></thead>
+        <tbody id="tbl-pdvs"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PERGUNTAS -->
+  <div class="panel" id="panel-perguntas">
+    <div class="card">
+      <h3>Nova pergunta</h3>
+      <p class="sub" style="margin-bottom:12px;">A escala de resposta (Muito Bom / Bom / Médio / Ruim / Muito Ruim) já é fixa — aqui você só define o enunciado.</p>
+      <input id="in-pergunta-texto" placeholder="Texto da pergunta">
+      <button onclick="addPergunta()">Adicionar pergunta</button>
+    </div>
+
+    <div class="card">
+      <h3>Perguntas do formulário</h3>
+      <p class="sub" style="margin-bottom:12px;">A ordem aqui é a ordem que aparece no formulário. Inativar uma pergunta não apaga o histórico de respostas já dadas — só remove ela de novas avaliações.</p>
+      <table>
+        <thead><tr><th style="width:60px;">Ordem</th><th>Pergunta</th><th style="width:90px;">Status</th><th style="width:190px;"></th></tr></thead>
+        <tbody id="tbl-perguntas"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LINKS -->
+  <div class="panel" id="panel-links">
+    <div class="card">
+      <h3>Link individual por gestor</h3>
+      <p class="sub" style="margin-bottom:14px;">Envie o link manualmente, ou dispare a mensagem por WhatsApp automaticamente daqui (via Evolution API, precisa ter o telefone cadastrado na aba Cadastros). O formulário já traz automaticamente o(s) analista(s) responsáveis pelas lojas dele.</p>
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <button onclick="dispararTodos()">Disparar WhatsApp para todos</button>
+        <button class="secondary" onclick="iniciarDisparoUmAUm()">Enviar um por vez</button>
+      </div>
+      <div class="card" id="card-disparo-sequencial" style="display:none;background:#FAFBFC;">
+        <p class="sub" id="disparo-progresso" style="margin-bottom:10px;"></p>
+        <div id="disparo-atual"></div>
+      </div>
+      <table>
+        <thead><tr><th>Gestor</th><th>Loja(s)</th><th>Link</th><th></th></tr></thead>
+        <tbody id="tbl-links"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="panel" id="panel-resultados">
+    <div class="filters">
+      <div>
+        <label>Mês de referência</label>
+        <select id="filtro-mes"><option value="">Todos</option></select>
+      </div>
+      <div>
+        <label>Analista</label>
+        <select id="filtro-analista"><option value="">Todos</option></select>
+      </div>
+      <div>
+        <label>Ponto de venda</label>
+        <select id="filtro-pdv"><option value="">Todos</option></select>
+      </div>
+      <button class="secondary small" onclick="loadResultados()">Filtrar</button>
+    </div>
+
+    <div class="card">
+      <h3>Índice de aceitabilidade por analista</h3>
+      <table>
+        <thead><tr><th>Analista</th><th>Índice médio</th><th>Avaliações</th></tr></thead>
+        <tbody id="tbl-resumo"><tr><td colspan="3" class="empty">—</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Avaliações por ponto de venda</h3>
+      <table class="tbl-detalhe-fixed">
+        <thead><tr><th>Ponto de Venda</th><th>Gestor</th><th>Analista</th><th>Mês</th><th>Índice</th><th>Observação</th></tr></thead>
+        <tbody id="tbl-detalhe"><tr><td colspan="6" class="empty">—</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-trend">
+  <div class="modal">
+    <h2 id="trend-titulo">Analista</h2>
+    <div class="info" id="trend-sub" style="margin-bottom:14px;"></div>
+    <div id="trend-avaliacoes-lista"></div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeModal('overlay-trend')">Fechar</button>
+      <button onclick="baixarPdfAnalista()">Baixar PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// >>> PREENCHA AQUI <<<
+const SUPABASE_URL = 'https://fevhyllvfhvzzfhwyjuk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZldmh5bGx2Zmh2enpmaHd5anVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NzEyMTcsImV4cCI6MjA5NDQ0NzIxN30.GJRgEKW1bVWX1957_bKCTO6aVmR_rXWRCmo9-ZJDPiE';
+// URL pública onde formulario.html vai ficar hospedado (GitHub Pages)
+const FORM_BASE_URL = 'https://admvxcase2026-creator.github.io/feedbackgestores/formulario.html';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabase = supabase;
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// TABS
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+    if(tab.dataset.tab === 'perguntas') loadPerguntas();
+    if(tab.dataset.tab === 'links') loadLinks();
+    if(tab.dataset.tab === 'resultados') loadResultados();
+  });
+});
+
+async function loadSelects(){
+  const { data: analistas } = await supabase.from('analistas').select('*').eq('ativo', true).order('nome');
+  const { data: gestores } = await supabase.from('gestores').select('*').order('nome');
+
+  const selAnalista = document.getElementById('in-pdv-analista');
+  const selGestor = document.getElementById('in-pdv-gestor');
+  const filtroAnalista = document.getElementById('filtro-analista');
+
+  selAnalista.innerHTML = '<option value="">Selecione o analista…</option>' + (analistas||[]).map(a=>`<option value="${a.id}">${a.nome}</option>`).join('');
+  selGestor.innerHTML = '<option value="">Selecione o gestor…</option>' + (gestores||[]).map(g=>`<option value="${g.id}">${g.nome}</option>`).join('');
+  filtroAnalista.innerHTML = '<option value="">Todos</option>' + (analistas||[]).map(a=>`<option value="${a.id}">${a.nome}</option>`).join('');
+
+  return { analistas, gestores };
+}
+
+async function loadListas(){
+  const { data: analistas } = await supabase.from('analistas').select('*').order('nome');
+  const tblA = document.getElementById('tbl-analistas');
+  tblA.innerHTML = (!analistas || analistas.length === 0)
+    ? '<tr><td colspan="2" class="empty">Nenhum analista cadastrado.</td></tr>'
+    : analistas.map(a => `
+      <tr>
+        <td>${a.nome}${a.ativo ? '' : ' <span class="sub" style="color:var(--sub)">(inativo)</span>'}</td>
+        <td><button class="secondary small" onclick="removeAnalista('${a.id}')">Remover</button></td>
+      </tr>`).join('');
+
+  const { data: gestores } = await supabase.from('gestores').select('*').order('nome');
+  const tblG = document.getElementById('tbl-gestores');
+  tblG.innerHTML = (!gestores || gestores.length === 0)
+    ? '<tr><td colspan="3" class="empty">Nenhum gestor cadastrado.</td></tr>'
+    : gestores.map(g => `
+      <tr>
+        <td>${g.nome}</td>
+        <td>${g.telefone || '—'}</td>
+        <td><button class="secondary small" onclick="removeGestor('${g.id}')">Remover</button></td>
+      </tr>`).join('');
+}
+
+window.removeAnalista = async function(id){
+  if(!confirm('Remover este analista? Se ele estiver vinculado a algum ponto de venda, remova o vínculo primeiro.')) return;
+  const { error } = await supabase.from('analistas').delete().eq('id', id);
+  if(error) return alert('Não foi possível remover: ' + error.message + '\n\nProvavelmente ele ainda está vinculado a um ponto de venda — remova o vínculo na tabela de pontos de venda primeiro.');
+  toast('Analista removido');
+  loadListas(); loadSelects(); loadPdvs();
+}
+
+window.removeGestor = async function(id){
+  if(!confirm('Remover este gestor? Isso também apaga os pontos de venda vinculados a ele e o histórico de avaliações. Essa ação não pode ser desfeita.')) return;
+  const { error } = await supabase.from('gestores').delete().eq('id', id);
+  if(error) return alert('Não foi possível remover: ' + error.message);
+  toast('Gestor removido');
+  loadListas(); loadSelects(); loadPdvs();
+}
+
+window.addAnalista = async function(){
+  const nome = document.getElementById('in-analista-nome').value.trim();
+  if(!nome) return;
+  const { error } = await supabase.from('analistas').insert({ nome });
+  if(error) return alert(error.message);
+  document.getElementById('in-analista-nome').value = '';
+  toast('Analista adicionado');
+  loadSelects(); loadPdvs(); loadListas();
+}
+
+window.addGestor = async function(){
+  const nome = document.getElementById('in-gestor-nome').value.trim();
+  const telefone = document.getElementById('in-gestor-tel').value.trim();
+  if(!nome) return;
+  const { error } = await supabase.from('gestores').insert({ nome, telefone: telefone || null });
+  if(error) return alert(error.message);
+  document.getElementById('in-gestor-nome').value = '';
+  document.getElementById('in-gestor-tel').value = '';
+  toast('Gestor adicionado');
+  loadSelects(); loadPdvs(); loadListas();
+}
+
+window.addPdv = async function(){
+  const nome = document.getElementById('in-pdv-nome').value.trim();
+  const codigo = document.getElementById('in-pdv-codigo').value.trim();
+  const gestor_id = document.getElementById('in-pdv-gestor').value;
+  const analista_id = document.getElementById('in-pdv-analista').value;
+  if(!nome || !gestor_id || !analista_id) return alert('Preencha nome, gestor e analista.');
+  const { error } = await supabase.from('pontos_venda').insert({ nome, codigo: codigo || null, gestor_id, analista_id });
+  if(error) return alert(error.message);
+  document.getElementById('in-pdv-nome').value = '';
+  document.getElementById('in-pdv-codigo').value = '';
+  toast('Ponto de venda adicionado');
+  loadPdvs();
+}
+
+window.removePdv = async function(id){
+  if(!confirm('Remover este ponto de venda?')) return;
+  await supabase.from('pontos_venda').delete().eq('id', id);
+  loadPdvs();
+}
+
+async function loadPdvs(){
+  const { data } = await supabase.from('pontos_venda').select('*, gestores(nome), analistas(nome)').order('nome');
+  const tbl = document.getElementById('tbl-pdvs');
+  if(!data || data.length === 0){
+    tbl.innerHTML = '<tr><td colspan="4" class="empty">Nenhum ponto de venda cadastrado ainda.</td></tr>';
+    return;
+  }
+  tbl.innerHTML = data.map(p => `
+    <tr>
+      <td>${p.nome}${p.codigo ? ' <span style="color:var(--sub)">('+p.codigo+')</span>' : ''}</td>
+      <td>${p.gestores?.nome || '—'}</td>
+      <td>${p.analistas?.nome || '—'}</td>
+      <td><button class="secondary small" onclick="removePdv('${p.id}')">Remover</button></td>
+    </tr>`).join('');
+}
+
+async function loadPerguntas(){
+  const { data } = await supabase.from('perguntas').select('*').order('ordem');
+  const tbl = document.getElementById('tbl-perguntas');
+  if(!data || data.length === 0){
+    tbl.innerHTML = '<tr><td colspan="4" class="empty">Nenhuma pergunta cadastrada ainda.</td></tr>';
+    return;
+  }
+  tbl.innerHTML = data.map(p => `
+    <tr>
+      <td>
+        <input type="number" value="${p.ordem}" style="margin-bottom:0;width:56px;" onchange="updateOrdem('${p.id}', this.value)">
+      </td>
+      <td>${p.texto}</td>
+      <td><span class="badge" style="background:${p.ativa ? '#1E9E5A' : '#8A93A1'}">${p.ativa ? 'Ativa' : 'Inativa'}</span></td>
+      <td>
+        <button class="secondary small" onclick="editPergunta('${p.id}', ${JSON.stringify(p.texto).replace(/"/g,'&quot;')})">Editar</button>
+        <button class="secondary small" onclick="togglePergunta('${p.id}', ${p.ativa})">${p.ativa ? 'Inativar' : 'Ativar'}</button>
+        <button class="secondary small" onclick="removePergunta('${p.id}')">Excluir</button>
+      </td>
+    </tr>`).join('');
+}
+
+window.addPergunta = async function(){
+  const texto = document.getElementById('in-pergunta-texto').value.trim();
+  if(!texto) return;
+  const { data: existentes } = await supabase.from('perguntas').select('ordem').order('ordem', {ascending:false}).limit(1);
+  const proximaOrdem = existentes && existentes.length ? existentes[0].ordem + 1 : 1;
+  const { error } = await supabase.from('perguntas').insert({ texto, ordem: proximaOrdem, ativa: true });
+  if(error) return alert(error.message);
+  document.getElementById('in-pergunta-texto').value = '';
+  toast('Pergunta adicionada');
+  loadPerguntas();
+}
+
+window.editPergunta = async function(id, textoAtual){
+  const novo = prompt('Editar pergunta:', textoAtual);
+  if(novo === null || !novo.trim() || novo.trim() === textoAtual) return;
+  const { error } = await supabase.from('perguntas').update({ texto: novo.trim() }).eq('id', id);
+  if(error) return alert(error.message);
+  toast('Pergunta atualizada');
+  loadPerguntas();
+}
+
+window.togglePergunta = async function(id, ativaAtual){
+  const { error } = await supabase.from('perguntas').update({ ativa: !ativaAtual }).eq('id', id);
+  if(error) return alert(error.message);
+  toast(!ativaAtual ? 'Pergunta ativada' : 'Pergunta inativada');
+  loadPerguntas();
+}
+
+window.removePergunta = async function(id){
+  if(!confirm('Excluir esta pergunta? Se ela já tem respostas salvas em avaliações antigas, prefira "Inativar" em vez de excluir.')) return;
+  const { error } = await supabase.from('perguntas').delete().eq('id', id);
+  if(error) return alert(error.message);
+  toast('Pergunta excluída');
+  loadPerguntas();
+}
+
+window.updateOrdem = async function(id, novaOrdem){
+  const { error } = await supabase.from('perguntas').update({ ordem: Number(novaOrdem) }).eq('id', id);
+  if(error) return alert(error.message);
+  toast('Ordem atualizada');
+  loadPerguntas();
+}
+
+// >>> PREENCHA AQUI depois de implantar o Apps Script (veja whatsapp-backend-appsscript.gs) <<<
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxgaeARb3sdHSR8Bl35x-rpuZBBAym42phJpTbO1pXl2F6YPf5qc9etXSME-G55Mqor/exec';
+const APP_SECRET = 'Rodrigo12.';
+
+function telefoneParaNumero(tel){
+  if(!tel) return null;
+  let digitos = tel.replace(/\D/g, '');
+  if(digitos.length === 0) return null;
+  if(!digitos.startsWith('55')) digitos = '55' + digitos;
+  return digitos;
+}
+
+async function enviarWhatsApp(gestorId){
+  const resp = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ secret: APP_SECRET, gestorId, formBaseUrl: FORM_BASE_URL })
+  });
+  const data = await resp.json();
+  if(!resp.ok || data.error){
+    throw new Error(data.error || `Erro (${resp.status})`);
+  }
+  return data;
+}
+
+async function loadLinks(){
+  const { data: gestores } = await supabase.from('gestores').select('*, pontos_venda(nome)').order('nome');
+  const tbl = document.getElementById('tbl-links');
+  if(!gestores || gestores.length === 0){
+    tbl.innerHTML = '<tr><td colspan="4" class="empty">Cadastre gestores na aba Cadastros primeiro.</td></tr>';
+    return;
+  }
+  tbl.innerHTML = gestores.map(g => {
+    const link = `${FORM_BASE_URL}?g=${g.id}`;
+    const lojas = (g.pontos_venda||[]).map(p=>p.nome).join(', ') || '—';
+    const numero = telefoneParaNumero(g.telefone);
+    return `
+    <tr>
+      <td>${g.nome}</td>
+      <td>${lojas}</td>
+      <td>
+        <div class="link-row">
+          <input readonly value="${link}" onclick="this.select()">
+          <button class="small" onclick="copyLink('${link}')">Copiar</button>
+        </div>
+      </td>
+      <td id="wpp-status-${g.id}">${numero
+        ? `<button class="small" style="background:#1E9E5A;" onclick="enviarUnico('${g.id}', this)">Enviar</button>`
+        : `<span class="sub" style="color:var(--sub);font-size:12px;">sem telefone</span>`}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.enviarUnico = async function(gestorId, btnEl){
+  const { data: g } = await supabase.from('gestores').select('*').eq('id', gestorId).single();
+  const original = btnEl.textContent;
+  btnEl.disabled = true; btnEl.textContent = 'Enviando…';
+  try{
+    await enviarWhatsApp(gestorId);
+    btnEl.textContent = 'Enviado ✓'; btnEl.style.background = '#1E9E5A';
+    toast(`Mensagem enviada para ${g.nome}`);
+  } catch(e){
+    btnEl.disabled = false; btnEl.textContent = original;
+    alert(`Falha ao enviar para ${g.nome}: ${e.message}`);
+  }
+}
+
+let filaDisparo = [];
+let filaIndex = 0;
+
+window.iniciarDisparoUmAUm = async function(){
+  const { data: gestores } = await supabase.from('gestores').select('*').order('nome');
+  if(!gestores || gestores.length === 0) return alert('Nenhum gestor cadastrado.');
+
+  filaDisparo = gestores.filter(g => telefoneParaNumero(g.telefone));
+  if(filaDisparo.length === 0) return alert('Nenhum gestor tem telefone cadastrado. Adicione o telefone na aba Cadastros.');
+
+  filaIndex = 0;
+  document.getElementById('card-disparo-sequencial').style.display = 'block';
+  renderDisparoAtual();
+}
+
+function renderDisparoAtual(){
+  const total = filaDisparo.length;
+  if(filaIndex >= total){
+    document.getElementById('disparo-progresso').textContent = `Concluído — ${total} de ${total} processados.`;
+    document.getElementById('disparo-atual').innerHTML = `<button class="secondary" onclick="document.getElementById('card-disparo-sequencial').style.display='none'">Fechar</button>`;
+    return;
+  }
+
+  const g = filaDisparo[filaIndex];
+  document.getElementById('disparo-progresso').textContent = `Gestor ${filaIndex + 1} de ${total}: ${g.nome}`;
+  document.getElementById('disparo-atual').innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button style="background:#1E9E5A;" id="btn-enviar-sequencial">Enviar agora</button>
+      <button class="secondary" onclick="avancarDisparo()">Pular este</button>
+    </div>`;
+  document.getElementById('btn-enviar-sequencial').onclick = async function(){
+    this.disabled = true; this.textContent = 'Enviando…';
+    try{
+      await enviarWhatsApp(g.id);
+      toast(`Enviado para ${g.nome}`);
+      avancarDisparo();
+    } catch(e){
+      alert(`Falha ao enviar para ${g.nome}: ${e.message}`);
+      this.disabled = false; this.textContent = 'Enviar agora';
+    }
+  };
+}
+
+window.avancarDisparo = function(){
+  filaIndex++;
+  renderDisparoAtual();
+}
+
+window.dispararTodos = async function(){
+  const { data: gestores } = await supabase.from('gestores').select('*').order('nome');
+  if(!gestores || gestores.length === 0) return alert('Nenhum gestor cadastrado.');
+
+  const comTelefone = gestores.filter(g => telefoneParaNumero(g.telefone));
+  const semTelefone = gestores.length - comTelefone.length;
+
+  if(comTelefone.length === 0) return alert('Nenhum gestor tem telefone cadastrado. Adicione o telefone na aba Cadastros.');
+
+  const confirmar = confirm(`Isso vai enviar a mensagem via WhatsApp para ${comTelefone.length} gestor(es) automaticamente, um após o outro.${semTelefone > 0 ? ` (${semTelefone} sem telefone serão ignorados.)` : ''}\n\nContinuar?`);
+  if(!confirmar) return;
+
+  let sucesso = 0, falha = 0;
+  for(const g of comTelefone){
+    try{
+      await enviarWhatsApp(g.id);
+      sucesso++;
+    } catch(e){
+      falha++;
+    }
+    await new Promise(r => setTimeout(r, 700));
+  }
+
+  toast(`Envio concluído: ${sucesso} enviado(s)${falha > 0 ? `, ${falha} falharam` : ''}`);
+}
+
+window.copyLink = function(link){
+  navigator.clipboard.writeText(link);
+  toast('Link copiado');
+}
+
+function corIndice(v){
+  if(v >= 85) return '#1E9E5A';
+  if(v >= 65) return '#63B36B';
+  if(v >= 45) return '#D9A441';
+  if(v >= 25) return '#DB7A3E';
+  return '#D0342C';
+}
+
+async function popularFiltroMes(){
+  const { data } = await supabase.from('feedbacks').select('mes_referencia');
+  const meses = [...new Set((data||[]).map(f=>f.mes_referencia))].sort().reverse();
+  const sel = document.getElementById('filtro-mes');
+  sel.innerHTML = '<option value="">Todos</option>' + meses.map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
+async function popularFiltroPdv(){
+  const { data } = await supabase.from('pontos_venda').select('id, nome').order('nome');
+  const sel = document.getElementById('filtro-pdv');
+  sel.innerHTML = '<option value="">Todos</option>' + (data||[]).map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+}
+
+let perguntasMapCache = null;
+async function getPerguntasMap(){
+  if(perguntasMapCache) return perguntasMapCache;
+  const { data } = await supabase.from('perguntas').select('id, texto');
+  perguntasMapCache = Object.fromEntries((data||[]).map(p => [p.id, p.texto]));
+  return perguntasMapCache;
+}
+
+function respostaLabel(v){
+  const m = { MUITO_BOM:'Muito Bom', BOM:'Bom', MEDIO:'Médio', RUIM:'Ruim', MUITO_RUIM:'Muito Ruim' };
+  return m[v] || v;
+}
+
+async function renderRespostasDetalhe(feedback){
+  const map = await getPerguntasMap();
+  const entradas = Object.entries(feedback.respostas || {});
+  const temAnterior = !!feedback._anterior;
+  return `
+    <div class="detail-box">
+      ${temAnterior ? `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:11.5px;color:var(--sub);">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#B4B2A9;border-radius:2px;margin-right:4px;"></span>Mês anterior</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#2D5BFF;border-radius:2px;margin-right:4px;"></span>Este mês</span>
+      </div>` : ''}
+      <div style="position:relative;height:${entradas.length * (temAnterior ? 50 : 40) + 30}px;">
+        <canvas id="chart-resp-${feedback.id}" role="img" aria-label="Gráfico de barras com as respostas desta avaliação por pergunta"></canvas>
+      </div>
+      <div id="mudancas-${feedback.id}"></div>
+      <p style="margin:12px 0 0;"><b>Observação:</b> ${feedback.observacao || '—'}</p>
+    </div>`;
+}
+
+function instanciarChartResposta(feedback){
+  getPerguntasMap().then(map => {
+    const canvas = document.getElementById(`chart-resp-${feedback.id}`);
+    if(!canvas) return;
+    const entradas = Object.entries(feedback.respostas || {});
+    const labels = entradas.map(([pid]) => { const t = map[pid] || 'Pergunta removida'; return t.length > 26 ? t.slice(0,24)+'…' : t; });
+    const valores = entradas.map(([,resp]) => SCORE_MAP[resp] ?? 50);
+    const anterior = feedback._anterior;
+
+    if(anterior){
+      const valoresAnteriores = entradas.map(([pid]) => SCORE_MAP[anterior.respostas?.[pid]] ?? null);
+      new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels, datasets: [
+          { label: 'Mês anterior', data: valoresAnteriores, backgroundColor: '#B4B2A9' },
+          { label: 'Este mês', data: valores, backgroundColor: '#2D5BFF' }
+        ]},
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { min:0, max:100, ticks:{ callback: v => v+'%' } } },
+          plugins: { legend: { display:false } }
+        }
+      });
+
+      // lista só as perguntas que mudaram, com o nome do tópico
+      const mudancas = entradas.map(([pid, resp]) => {
+        const atual = SCORE_MAP[resp] ?? 50;
+        const antigo = SCORE_MAP[anterior.respostas?.[pid]];
+        if(antigo === undefined) return null;
+        const diff = atual - antigo;
+        if(Math.abs(diff) < 25) return null;
+        return { texto: map[pid] || 'Pergunta removida', melhorou: diff > 0 };
+      }).filter(Boolean);
+
+      const el = document.getElementById(`mudancas-${feedback.id}`);
+      if(el){
+        el.innerHTML = mudancas.length === 0
+          ? `<p class="hint" style="margin:10px 0 0;">Nenhuma pergunta mudou de faixa em relação ao mês anterior.</p>`
+          : `<p class="hint" style="margin:12px 0 4px;"><b>O que mudou:</b></p>` + mudancas.map(m => `
+            <div style="font-size:12.5px;margin-bottom:4px;">
+              <span class="trend-badge" style="background:${m.melhorou ? 'var(--ok)' : 'var(--bad)'}">${m.melhorou ? '↑ melhorou' : '↓ piorou'}</span>
+              ${m.texto}
+            </div>`).join('');
+      }
+    } else {
+      new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels, datasets: [{ data: valores, backgroundColor: valores.map(v => corIndice(v)) }] },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { min:0, max:100, ticks:{ callback: v => v+'%' } } },
+          plugins: { legend: { display:false } }
+        }
+      });
+    }
+  });
+}
+
+const SCORE_MAP = { MUITO_BOM:100, BOM:75, MEDIO:50, RUIM:25, MUITO_RUIM:0 };
+
+let feedbacksCache = {};
+
+window.toggleRespostaRow = async function(feedbackId, containerId){
+  const el = document.getElementById(containerId);
+  if(el.style.display === 'table-row'){ el.style.display = 'none'; return; }
+  const feedback = feedbacksCache[feedbackId];
+  el.querySelector('td').innerHTML = await renderRespostasDetalhe(feedback);
+  el.style.display = 'table-row';
+  instanciarChartResposta(feedback);
+}
+
+window.loadResultados = async function(){
+  const mes = document.getElementById('filtro-mes').value;
+  const analistaId = document.getElementById('filtro-analista').value;
+  const pdvId = document.getElementById('filtro-pdv').value;
+
+  let query = supabase.from('feedbacks').select('*, gestores(nome), analistas(id, nome)');
+  if(mes) query = query.eq('mes_referencia', mes);
+  if(analistaId) query = query.eq('analista_id', analistaId);
+  const { data: feedbacks } = await query.order('mes_referencia', {ascending:false});
+
+  const { data: pdvs } = await supabase.from('pontos_venda').select('*, gestores(id,nome), analistas(id,nome)');
+
+  // resumo por analista
+  const resumo = {};
+  (feedbacks||[]).forEach(f => {
+    const id = f.analista_id;
+    if(!resumo[id]) resumo[id] = { nome: f.analistas?.nome, soma:0, n:0 };
+    resumo[id].soma += Number(f.indice_aceitabilidade);
+    resumo[id].n += 1;
+  });
+  const tblResumo = document.getElementById('tbl-resumo');
+  const resumoArr = Object.entries(resumo).map(([id, r]) => ({ id, ...r })).sort((a,b)=>(b.soma/b.n)-(a.soma/a.n));
+  if(resumoArr.length === 0){
+    tblResumo.innerHTML = '<tr><td colspan="3" class="empty">Sem avaliações no período.</td></tr>';
+  } else {
+    tblResumo.innerHTML = resumoArr.map(r => {
+      const media = Math.round((r.soma/r.n)*10)/10;
+      return `<tr class="resposta-row" onclick="abrirTendenciaAnalista('${r.id}', ${JSON.stringify(r.nome).replace(/"/g,'&quot;')})"><td>${r.nome}</td>
+        <td><div class="index-cell"><b>${media}%</b><div class="bar"><div class="bar-fill" style="width:${media}%;background:${corIndice(media)}"></div></div></div></td>
+        <td>${r.n}</td></tr>`;
+    }).join('');
+  }
+
+  // detalhe por ponto de venda: junta pdvs com feedbacks do gestor+analista correspondente
+  let linhas = [];
+  (pdvs||[]).forEach(p => {
+    if(pdvId && p.id !== pdvId) return;
+    const fbs = (feedbacks||[]).filter(f => f.ponto_venda_id === p.id);
+    if(fbs.length === 0){
+      linhas.push({ pdv: p.nome, pdvId: p.id, gestor: p.gestores?.nome, analista: p.analistas?.nome, mes:'—', indice:null, obs:null, feedback:null });
+    } else {
+      fbs.forEach(f => linhas.push({ pdv: p.nome, pdvId: p.id, gestor: p.gestores?.nome, analista: p.analistas?.nome, mes: f.mes_referencia, indice: f.indice_aceitabilidade, obs: f.observacao, feedback: f }));
+    }
+  });
+
+  // calcula tendência (comparação com mês anterior do mesmo PDV)
+  const porPdv = {};
+  linhas.forEach(l => { if(l.feedback){ feedbacksCache[l.feedback.id] = l.feedback; (porPdv[l.pdvId] = porPdv[l.pdvId] || []).push(l); } });
+  Object.values(porPdv).forEach(arr => {
+    arr.sort((a,b) => a.mes.localeCompare(b.mes));
+    arr.forEach((l, i) => {
+      if(i > 0){
+        const diff = l.indice - arr[i-1].indice;
+        l.tendencia = diff > 2 ? 'up' : (diff < -2 ? 'down' : 'flat');
+        l.feedback._anterior = arr[i-1].feedback;
+      }
+    });
+  });
+
+  const tblDetalhe = document.getElementById('tbl-detalhe');
+  if(linhas.length === 0){
+    tblDetalhe.innerHTML = '<tr><td colspan="6" class="empty">Nenhum resultado para os filtros selecionados.</td></tr>';
+  } else {
+    tblDetalhe.innerHTML = linhas.map((l, i) => {
+      const rowId = `resp-row-${i}`;
+      const trendBadge = l.tendencia === 'up' ? `<span class="trend-badge" style="background:var(--ok)">↑ melhorou</span>`
+        : l.tendencia === 'down' ? `<span class="trend-badge" style="background:var(--bad)">↓ piorou</span>`
+        : l.tendencia === 'flat' ? `<span class="trend-badge" style="background:#8A93A1">= estável</span>` : '';
+      return `
+      <tr class="${l.feedback ? 'resposta-row' : ''}" ${l.feedback ? `onclick="toggleRespostaRow('${l.feedback.id}', '${rowId}')"` : ''}>
+        <td>${l.pdv}</td>
+        <td>${l.gestor || '—'}</td>
+        <td>${l.analista || '—'}</td>
+        <td>${mesLabelCompleto(l.mes)}</td>
+        <td>${l.indice !== null ? `<span class="badge" style="background:${corIndice(l.indice)}">${l.indice}%</span>${trendBadge}` : '<span class="sub" style="color:var(--sub)">sem resposta</span>'}</td>
+        <td class="obs-cell">${l.obs || '—'}</td>
+      </tr>
+      ${l.feedback ? `<tr id="${rowId}" style="display:none;"><td colspan="6"></td></tr>` : ''}`;
+    }).join('');
+  }
+}
+
+window.baixarPdfAnalista = async function(){
+  const { analistaId, analistaNome, feedbacks, pdvNomeMap } = currentTrend;
+  if(!feedbacks || feedbacks.length === 0) return alert('Nenhuma avaliação pra gerar PDF.');
+
+  const map = await getPerguntasMap();
+
+  // usa o mês mais recente disponível pra esse analista
+  const mesMaisRecente = feedbacks.map(f => f.mes_referencia).sort().pop();
+  const doDaMes = feedbacks.filter(f => f.mes_referencia === mesMaisRecente);
+  const indiceMedio = Math.round(doDaMes.reduce((a,b)=>a+Number(b.indice_aceitabilidade),0) / doDaMes.length);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const margin = 48;
+  const footerH = 30;
+  let y = margin;
+
+  const INK = '#1C2430', SUB = '#5B6472', LINE = '#E3E6EA', TRACK = '#F1EFE8';
+
+  function desenharRodape(){
+    doc.setDrawColor(LINE); doc.setLineWidth(0.75);
+    doc.line(margin, H - footerH, W - margin, H - footerH);
+    doc.setTextColor(SUB); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+    doc.text('Sistema de Feedback de Gestores', margin, H - footerH + 14);
+  }
+
+  function novaPagina(){
+    desenharRodape();
+    doc.addPage();
+    y = margin;
+  }
+
+  function checkPageBreak(alturaNecessaria){
+    if(y + alturaNecessaria > H - footerH - 10) novaPagina();
+  }
+
+  // cabeçalho — cursor desce a partir do topo
+  doc.setTextColor(INK);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+  doc.text(`Relatório mensal — ${analistaNome}`, margin, y);
+  y += 18;
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  doc.setTextColor(SUB);
+  doc.text(mesLabelCompleto(mesMaisRecente), margin, y);
+  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, W - margin, y, { align: 'right' });
+  y += 10;
+
+  doc.setDrawColor(INK); doc.setLineWidth(1.3);
+  doc.line(margin, y, W - margin, y);
+  y += 30;
+
+  // resumo — 3 caixas lado a lado, sem cantos arredondados (evita artefato de borda)
+  const boxW = (W - 2*margin - 16) / 3;
+  const boxH = 40;
+  const resumo = [
+    ['Índice médio', indiceMedio + '%'],
+    ['Avaliações', String(doDaMes.length)],
+    ['Destinos', String(new Set(doDaMes.map(f=>f.ponto_venda_id)).size)]
+  ];
+  doc.setDrawColor(TRACK);
+  resumo.forEach(([label, valor], i) => {
+    const bx = margin + i * (boxW + 8);
+    doc.setFillColor(TRACK);
+    doc.rect(bx, y, boxW, boxH, 'F');
+    doc.setTextColor(SUB); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    doc.text(label, bx + boxW/2, y + 15, { align: 'center' });
+    doc.setTextColor(INK); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+    doc.text(valor, bx + boxW/2, y + 32, { align: 'center' });
+  });
+  y += boxH + 26;
+
+  // por destino
+  for(const f of doDaMes){
+    const entradas = Object.entries(f.respostas || {});
+    checkPageBreak(20 + entradas.length * 22 + 20);
+
+    doc.setTextColor(INK); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    const lojaNome = pdvNomeMap[f.ponto_venda_id] || 'Ponto de venda';
+    doc.text(lojaNome, margin, y);
+    const tw = doc.getTextWidth(lojaNome);
+    doc.setTextColor(SUB); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text(`· ${f.gestores?.nome || '—'} · ${f.indice_aceitabilidade}%`, margin + tw + 6, y);
+    y += 18;
+
+    for(const [pid, resp] of entradas){
+      checkPageBreak(22);
+      const texto = map[pid] || 'Pergunta removida';
+      const label = respostaLabel(resp);
+      const cor = corIndice(SCORE_MAP[resp] ?? 50);
+
+      doc.setTextColor(SUB); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+      doc.text(texto, margin, y);
+      doc.setTextColor(cor); doc.setFont('helvetica', 'bold');
+      doc.text(label, W - margin, y, { align: 'right' });
+      y += 8;
+
+      const score = SCORE_MAP[resp] ?? 50;
+      doc.setFillColor(TRACK);
+      doc.rect(margin, y, W - 2*margin, 6, 'F');
+      if(score > 0){
+        doc.setFillColor(cor);
+        doc.rect(margin, y, (W - 2*margin) * score / 100, 6, 'F');
+      }
+      y += 14;
+    }
+
+    doc.setTextColor(SUB); doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
+    doc.text(`Observação: ${f.observacao || '—'}`, margin, y);
+    y += 26;
+  }
+
+  desenharRodape();
+  doc.save(`relatorio-${analistaNome.replace(/\s+/g,'-').toLowerCase()}-${mesMaisRecente}.pdf`);
+}
+
+window.closeModal = function(id){
+  document.getElementById(id).classList.remove('show');
+}
+
+let trendChartInstance = null;
+let currentTrend = { analistaId: null, analistaNome: null, feedbacks: [], pdvNomeMap: {} };
+
+window.abrirTendenciaAnalista = async function(analistaId, analistaNome){
+  const { data: feedbacks } = await supabase.from('feedbacks')
+    .select('*, gestores(nome)')
+    .eq('analista_id', analistaId)
+    .order('mes_referencia');
+
+  document.getElementById('trend-titulo').textContent = analistaNome;
+
+  if(!feedbacks || feedbacks.length === 0){
+    document.getElementById('trend-sub').textContent = 'Sem avaliações registradas.';
+    document.getElementById('trend-avaliacoes-lista').innerHTML = '<p class="hint">—</p>';
+    document.getElementById('overlay-trend').classList.add('show');
+    currentTrend = { analistaId, analistaNome, feedbacks: [], pdvNomeMap: {} };
+    return;
+  }
+
+  // busca nomes dos pontos de venda separadamente (mais confiável que o embed)
+  const pdvIds = [...new Set(feedbacks.map(f => f.ponto_venda_id).filter(Boolean))];
+  const { data: pdvsData } = pdvIds.length > 0
+    ? await supabase.from('pontos_venda').select('id, nome').in('id', pdvIds)
+    : { data: [] };
+  const pdvNomeMap = Object.fromEntries((pdvsData||[]).map(p => [p.id, p.nome]));
+
+  document.getElementById('trend-sub').textContent = `${feedbacks.length} avaliação${feedbacks.length > 1 ? 'ões' : ''} registrada${feedbacks.length > 1 ? 's' : ''}`;
+
+  // agrupa por PDV e calcula tendência mês a mês dentro de cada destino
+  const porPdvTrend = {};
+  feedbacks.forEach(f => { (porPdvTrend[f.ponto_venda_id] = porPdvTrend[f.ponto_venda_id] || []).push(f); });
+  Object.values(porPdvTrend).forEach(arr => {
+    arr.sort((a,b) => a.mes_referencia.localeCompare(b.mes_referencia));
+    arr.forEach((f, i) => {
+      if(i > 0){
+        const diff = f.indice_aceitabilidade - arr[i-1].indice_aceitabilidade;
+        f._tendencia = diff > 2 ? 'up' : (diff < -2 ? 'down' : 'flat');
+        f._anterior = arr[i-1];
+      }
+      feedbacksCache[f.id] = f;
+    });
+  });
+
+  const lista = document.getElementById('trend-avaliacoes-lista');
+  const ordenados = [...feedbacks].reverse();
+  lista.innerHTML = ordenados.map(f => {
+    const trendBadge = f._tendencia === 'up' ? `<span class="trend-badge" style="background:var(--ok)">↑ melhorou</span>`
+      : f._tendencia === 'down' ? `<span class="trend-badge" style="background:var(--bad)">↓ piorou</span>`
+      : f._tendencia === 'flat' ? `<span class="trend-badge" style="background:#8A93A1">= estável</span>` : '';
+    return `
+    <div class="avaliacao-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div>
+          <b>${pdvNomeMap[f.ponto_venda_id] || '—'}</b>
+          <span style="color:var(--sub);font-size:12.5px;"> · ${f.gestores?.nome || '—'} · ${mesLabelCompleto(f.mes_referencia)}</span>
+        </div>
+        <div><span class="badge" style="background:${corIndice(f.indice_aceitabilidade)}">${f.indice_aceitabilidade}%</span>${trendBadge}</div>
+      </div>
+      <div id="chart-wrap-${f.id}"></div>
+    </div>`;
+  }).join('');
+
+  for(const f of ordenados){
+    const wrap = document.getElementById(`chart-wrap-${f.id}`);
+    if(wrap) wrap.innerHTML = await renderRespostasDetalhe(f);
+    instanciarChartResposta(f);
+  }
+
+  document.getElementById('overlay-trend').classList.add('show');
+  currentTrend = { analistaId, analistaNome, feedbacks, pdvNomeMap };
+}
+
+function mesLabelCurto(mesStr){
+  const [y,m] = mesStr.split('-');
+  const d = new Date(Number(y), Number(m)-1, 1);
+  return d.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'});
+}
+function mesLabelCompleto(mesStr){
+  if(!mesStr || !/^\d{4}-\d{2}$/.test(mesStr)) return '—';
+  const [y,m] = mesStr.split('-');
+  const d = new Date(Number(y), Number(m)-1, 1);
+  return d.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+}
+
+async function initAll(){
+  await loadSelects();
+  await loadPdvs();
+  await loadListas();
+  await popularFiltroMes();
+  await popularFiltroPdv();
+}
+initAll();
+
+function refreshRealtime(){
+  loadPdvs();
+  loadListas();
+  popularFiltroMes();
+  popularFiltroPdv();
+  if(document.getElementById('panel-resultados').classList.contains('active')) loadResultados();
+}
+
+supabase.channel('feedback-realtime')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'gestores' }, refreshRealtime)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'analistas' }, refreshRealtime)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'pontos_venda' }, refreshRealtime)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'perguntas' }, refreshRealtime)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'feedbacks' }, refreshRealtime)
+  .subscribe();
+
+</script>
+</body>
+</html>
